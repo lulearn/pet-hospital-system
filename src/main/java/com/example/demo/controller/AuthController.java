@@ -1,14 +1,19 @@
 package com.example.demo.controller;
 
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.example.demo.common.Result;
 import com.example.demo.entity.Doctor;
 import com.example.demo.entity.User;
+import com.example.demo.mapper.DoctorMapper;
+import com.example.demo.mapper.UserMapper;
 import com.example.demo.service.DoctorService;
 import com.example.demo.service.UserService;
 import com.example.demo.util.JwtUtil;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.util.DigestUtils;
 import org.springframework.web.bind.annotation.*;
 
+import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -26,6 +31,12 @@ public class AuthController {
 
     @Autowired
     private DoctorService doctorService;
+
+    @Autowired
+    private DoctorMapper doctorMapper;
+
+    @Autowired
+    private UserMapper userMapper;
 
     @Autowired
     private JwtUtil jwtUtil;
@@ -86,5 +97,30 @@ public class AuthController {
             userService.register(user);
         }
         return Result.success();
+    }
+
+    /**
+     * 忘记密码：通过用户名+手机号验证后重置密码
+     */
+    @PostMapping("/reset-password")
+    public Result<?> resetPassword(@RequestBody Map<String, String> body) {
+        String username = body.get("username");
+        String phone = body.get("phone");
+        String newPassword = body.get("newPassword");
+        // 先查医生表
+        Doctor doctor = doctorMapper.selectOne(new LambdaQueryWrapper<Doctor>().eq(Doctor::getUsername, username));
+        if (doctor != null && phone.equals(doctor.getPhone())) {
+            doctor.setPassword(DigestUtils.md5DigestAsHex(newPassword.getBytes(StandardCharsets.UTF_8)));
+            doctorMapper.updateById(doctor);
+            return Result.success();
+        }
+        // 再查用户表
+        User user = userMapper.selectOne(new LambdaQueryWrapper<User>().eq(User::getUsername, username));
+        if (user != null && phone.equals(user.getPhone())) {
+            user.setPassword(DigestUtils.md5DigestAsHex(newPassword.getBytes(StandardCharsets.UTF_8)));
+            userMapper.updateById(user);
+            return Result.success();
+        }
+        return Result.error("用户名或手机号不匹配");
     }
 }

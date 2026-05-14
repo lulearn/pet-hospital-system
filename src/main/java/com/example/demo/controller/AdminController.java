@@ -10,6 +10,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
 import javax.servlet.http.HttpServletRequest;
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
@@ -220,6 +221,61 @@ public class AdminController {
         consultation.setDeleted(1);
         consultationMapper.updateById(consultation);
         return Result.success();
+    }
+
+    // ========== 收入统计 ==========
+
+    @GetMapping("/stats/revenue")
+    public Result<Map<String, Object>> revenueStats() {
+        List<Order> orders = orderMapper.selectList(null);
+        BigDecimal totalRevenue = orders.stream()
+                .filter(o -> !"UNPAID".equals(o.getStatus()))
+                .map(Order::getTotalPrice)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        long paidCount = orders.stream().filter(o -> "PAID".equals(o.getStatus())).count();
+        long shippedCount = orders.stream().filter(o -> "SHIPPED".equals(o.getStatus())).count();
+        long receivedCount = orders.stream().filter(o -> "RECEIVED".equals(o.getStatus())).count();
+        return Result.success(Map.of("totalRevenue", totalRevenue, "paidCount", paidCount, "shippedCount", shippedCount, "receivedCount", receivedCount));
+    }
+
+    @GetMapping("/stats/dashboard")
+    public Result<Map<String, Object>> dashboardStats() {
+        long userCount = userMapper.selectCount(null);
+        long doctorCount = doctorMapper.selectCount(null);
+        long medicineCount = medicineMapper.selectCount(null);
+        long orderCount = orderMapper.selectCount(null);
+        long pendingAppointmentCount = appointmentMapper.selectCount(
+                new LambdaQueryWrapper<Appointment>().eq(Appointment::getStatus, "PENDING").ne(Appointment::getDeleted, 1));
+        // 月度收入
+        List<Order> allOrders = orderMapper.selectList(null);
+        BigDecimal monthRevenue = allOrders.stream()
+                .filter(o -> o.getCreateTime() != null && o.getCreateTime().getMonthValue() == java.time.LocalDate.now().getMonthValue())
+                .filter(o -> !"UNPAID".equals(o.getStatus()))
+                .map(Order::getTotalPrice)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        return Result.success(Map.of("userCount", userCount, "doctorCount", doctorCount, "medicineCount", medicineCount, "orderCount", orderCount, "pendingAppointmentCount", pendingAppointmentCount, "monthRevenue", monthRevenue));
+    }
+
+    // ========== 数据导出 ==========
+
+    @GetMapping("/export/appointments")
+    public Result<List<Map<String, Object>>> exportAppointments() {
+        List<Appointment> list = appointmentMapper.selectList(null);
+        return Result.success(list.stream().map(a -> {
+            User u = userMapper.selectById(a.getUserId());
+            Doctor d = doctorMapper.selectById(a.getDoctorId());
+            return Map.<String, Object>of("id", a.getId(), "userName", u != null ? u.getRealName() : "", "doctorName", d != null ? d.getRealName() : "", "petName", a.getPetName(), "species", a.getSpecies() != null ? a.getSpecies() : "", "status", a.getStatus(), "appointmentTime", a.getAppointmentTime() != null ? a.getAppointmentTime().toString() : "", "createTime", a.getCreateTime() != null ? a.getCreateTime().toString() : "");
+        }).collect(java.util.stream.Collectors.toList()));
+    }
+
+    @GetMapping("/export/orders")
+    public Result<List<Map<String, Object>>> exportOrders() {
+        List<Order> list = orderMapper.selectList(null);
+        return Result.success(list.stream().map(o -> {
+            User u = userMapper.selectById(o.getUserId());
+            Medicine m = medicineMapper.selectById(o.getMedicineId());
+            return Map.<String, Object>of("id", o.getId(), "userName", u != null ? u.getRealName() : "", "medicineName", m != null ? m.getName() : "", "quantity", o.getQuantity(), "totalPrice", o.getTotalPrice(), "status", o.getStatus(), "createTime", o.getCreateTime() != null ? o.getCreateTime().toString() : "");
+        }).collect(java.util.stream.Collectors.toList()));
     }
 
     // ========== 个人中心 ==========

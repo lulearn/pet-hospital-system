@@ -19,7 +19,8 @@
           <el-button type="primary" @click="login" :loading="loading" style="width:100%">登 录</el-button>
         </el-form-item>
       </el-form>
-      <div style="text-align:center">
+      <div style="text-align:center;display:flex;justify-content:space-between">
+        <el-link type="primary" @click="$router.push('/reset-password')">忘记密码</el-link>
         <el-link type="primary" @click="$router.push('/register')">没有账号？立即注册</el-link>
       </div>
     </div>

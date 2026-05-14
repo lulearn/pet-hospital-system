@@ -40,6 +40,18 @@ public class UserController {
     private ConsultationMapper consultationMapper;
 
     @Autowired
+    private PetMapper petMapper;
+
+    @Autowired
+    private NotificationMapper notificationMapper;
+
+    @Autowired
+    private PrescriptionMedicineMapper prescriptionMedicineMapper;
+
+    @Autowired
+    private DoctorScheduleMapper doctorScheduleMapper;
+
+    @Autowired
     private UserService userService;
 
     /**
@@ -247,6 +259,129 @@ public class UserController {
         user.setPassword(null);
         userService.updateById(user);
         return Result.success();
+    }
+
+    // ========== 宠物管理 ==========
+
+    @GetMapping("/pets")
+    public Result<List<Pet>> listPets(HttpServletRequest request) {
+        return Result.success(petMapper.selectList(
+                new LambdaQueryWrapper<Pet>().eq(Pet::getUserId, getUserId(request)).ne(Pet::getDeleted, 1)));
+    }
+
+    @PostMapping("/pets")
+    public Result<?> addPet(@RequestBody Pet pet, HttpServletRequest request) {
+        pet.setUserId(getUserId(request));
+        petMapper.insert(pet);
+        return Result.success();
+    }
+
+    @PutMapping("/pets")
+    public Result<?> updatePet(@RequestBody Pet pet, HttpServletRequest request) {
+        Pet exist = petMapper.selectById(pet.getId());
+        if (exist == null || !exist.getUserId().equals(getUserId(request))) {
+            return Result.error("无权操作");
+        }
+        petMapper.updateById(pet);
+        return Result.success();
+    }
+
+    @DeleteMapping("/pets/{id}")
+    public Result<?> deletePet(@PathVariable Long id, HttpServletRequest request) {
+        Pet exist = petMapper.selectById(id);
+        if (exist == null || !exist.getUserId().equals(getUserId(request))) {
+            return Result.error("无权操作");
+        }
+        exist.setDeleted(1);
+        petMapper.updateById(exist);
+        return Result.success();
+    }
+
+    // ========== 医生排班查询 ==========
+
+    @GetMapping("/doctor-schedules/{doctorId}")
+    public Result<List<DoctorSchedule>> getSchedules(@PathVariable Long doctorId) {
+        return Result.success(doctorScheduleMapper.selectList(
+                new LambdaQueryWrapper<DoctorSchedule>().eq(DoctorSchedule::getDoctorId, doctorId).eq(DoctorSchedule::getDeleted, 0)));
+    }
+
+    // ========== 消息通知 ==========
+
+    @GetMapping("/notifications")
+    public Result<List<Notification>> listNotifications(HttpServletRequest request) {
+        return Result.success(notificationMapper.selectList(
+                new LambdaQueryWrapper<Notification>().eq(Notification::getUserId, getUserId(request)).orderByDesc(Notification::getCreateTime)));
+    }
+
+    @GetMapping("/notifications/unread-count")
+    public Result<Map<String, Long>> unreadCount(HttpServletRequest request) {
+        long count = notificationMapper.selectCount(
+                new LambdaQueryWrapper<Notification>().eq(Notification::getUserId, getUserId(request)).eq(Notification::getIsRead, 0));
+        return Result.success(Map.of("count", count));
+    }
+
+    @PutMapping("/notifications/{id}/read")
+    public Result<?> readNotification(@PathVariable Long id) {
+        Notification n = notificationMapper.selectById(id);
+        if (n != null) { n.setIsRead(1); notificationMapper.updateById(n); }
+        return Result.success();
+    }
+
+    @PutMapping("/notifications/read-all")
+    public Result<?> readAllNotifications(HttpServletRequest request) {
+        List<Notification> list = notificationMapper.selectList(
+                new LambdaQueryWrapper<Notification>().eq(Notification::getUserId, getUserId(request)).eq(Notification::getIsRead, 0));
+        list.forEach(n -> { n.setIsRead(1); notificationMapper.updateById(n); });
+        return Result.success();
+    }
+
+    // ========== 就诊评分 ==========
+
+    @PutMapping("/consultations/{id}/rate")
+    public Result<?> rateConsultation(@PathVariable Long id, @RequestBody Map<String, Integer> body, HttpServletRequest request) {
+        Consultation consultation = consultationMapper.selectById(id);
+        if (consultation == null || !consultation.getUserId().equals(getUserId(request))) {
+            return Result.error("无权操作");
+        }
+        if (!"COMPLETED".equals(consultation.getStatus())) {
+            return Result.error("只能评价已完成的就诊");
+        }
+        consultation.setRating(body.get("rating"));
+        consultation.setRatedAt(LocalDateTime.now());
+        consultationMapper.updateById(consultation);
+        return Result.success();
+    }
+
+    // ========== 药方购药 ==========
+
+    @GetMapping("/consultations/{id}/medicines")
+    public Result<List<PrescriptionMedicine>> getConsultationMedicines(@PathVariable Long id, HttpServletRequest request) {
+        Consultation consultation = consultationMapper.selectById(id);
+        if (consultation == null || !consultation.getUserId().equals(getUserId(request))) {
+            return Result.error("无权操作");
+        }
+        return Result.success(prescriptionMedicineMapper.selectList(
+                new LambdaQueryWrapper<PrescriptionMedicine>().eq(PrescriptionMedicine::getConsultationId, id)));
+    }
+
+    @PostMapping("/consultations/{id}/buy-medicine")
+    public Result<?> buyFromPrescription(@PathVariable Long id, @RequestBody Map<String, Object> body, HttpServletRequest request) {
+        Long userId = getUserId(request);
+        Long medicineId = Long.valueOf(body.get("medicineId").toString());
+        int quantity = Integer.parseInt(body.get("quantity").toString());
+        Medicine medicine = medicineMapper.selectById(medicineId);
+        if (medicine == null) return Result.error("药品不存在");
+        if (medicine.getStock() < quantity) return Result.error("库存不足");
+        medicine.setStock(medicine.getStock() - quantity);
+        medicineMapper.updateById(medicine);
+        Order order = new Order();
+        order.setUserId(userId);
+        order.setMedicineId(medicineId);
+        order.setQuantity(quantity);
+        order.setTotalPrice(medicine.getPrice().multiply(BigDecimal.valueOf(quantity)));
+        order.setStatus("UNPAID");
+        orderMapper.insert(order);
+        return Result.success(order);
     }
 
     /**

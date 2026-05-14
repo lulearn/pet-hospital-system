@@ -9,7 +9,9 @@
         <el-menu-item index="/user/medicines"><el-icon><FirstAidKit /></el-icon> 药品管理</el-menu-item>
         <el-menu-item index="/user/orders"><el-icon><Document /></el-icon> 订单管理</el-menu-item>
         <el-menu-item index="/user/consultations"><el-icon><Edit /></el-icon> 就诊记录</el-menu-item>
+        <el-menu-item index="/user/pets"><el-icon><House /></el-icon> 宠物档案</el-menu-item>
         <el-menu-item index="/user/recharge"><el-icon><Wallet /></el-icon> 充值中心</el-menu-item>
+        <el-menu-item index="/user/notifications"><el-icon><Bell /></el-icon> 消息通知</el-menu-item>
         <el-menu-item index="/user/profile"><el-icon><User /></el-icon> 个人中心</el-menu-item>
       </el-menu>
     </el-aside>

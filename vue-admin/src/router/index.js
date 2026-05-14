@@ -21,6 +21,11 @@ const routes = [
     name: 'Register',
     component: () => import('../views/login/Register.vue')
   },
+  {
+    path: '/reset-password',
+    name: 'ResetPassword',
+    component: () => import('../views/login/ResetPassword.vue')
+  },
   // 用户端
   {
     path: '/user',
@@ -34,6 +39,8 @@ const routes = [
       { path: 'orders', component: () => import('../views/user/Orders.vue') },
       { path: 'recharge', component: () => import('../views/user/Recharge.vue') },
       { path: 'consultations', component: () => import('../views/user/Consultations.vue') },
+      { path: 'pets', component: () => import('../views/user/Pets.vue') },
+      { path: 'notifications', component: () => import('../views/user/Notifications.vue') },
       { path: 'profile', component: () => import('../views/user/Profile.vue') },
       { path: 'change-password', component: () => import('../views/user/ChangePassword.vue') }
     ]
@@ -47,6 +54,7 @@ const routes = [
       { path: 'dashboard', component: () => import('../views/doctor/Dashboard.vue') },
       { path: 'appointments', component: () => import('../views/doctor/Appointments.vue') },
       { path: 'consultations', component: () => import('../views/doctor/Consultations.vue') },
+      { path: 'schedules', component: () => import('../views/doctor/Schedules.vue') },
       { path: 'profile', component: () => import('../views/doctor/Profile.vue') },
       { path: 'change-password', component: () => import('../views/doctor/ChangePassword.vue') }
     ]
@@ -78,7 +86,7 @@ const router = createRouter({
 router.beforeEach((to, from, next) => {
   const token = localStorage.getItem('token')
   const role = localStorage.getItem('role')
-  if (to.path !== '/login' && to.path !== '/register' && !token) {
+  if (to.path !== '/login' && to.path !== '/register' && to.path !== '/reset-password' && !token) {
     next('/login')
   } else if (to.meta.role && to.meta.role !== role) {
     next('/login')

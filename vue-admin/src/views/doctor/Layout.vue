@@ -6,6 +6,7 @@
         <el-menu-item index="/doctor/dashboard"><el-icon><HomeFilled /></el-icon> 首页</el-menu-item>
         <el-menu-item index="/doctor/appointments"><el-icon><Calendar /></el-icon> 预约管理</el-menu-item>
         <el-menu-item index="/doctor/consultations"><el-icon><Edit /></el-icon> 就诊管理</el-menu-item>
+        <el-menu-item index="/doctor/schedules"><el-icon><Clock /></el-icon> 排班管理</el-menu-item>
         <el-menu-item index="/doctor/profile"><el-icon><User /></el-icon> 个人中心</el-menu-item>
       </el-menu>
     </el-aside>

@@ -21,6 +21,8 @@ public class Consultation {
     private String notes;
     private String status;
     private Integer deleted;
+    private Integer rating;
+    private LocalDateTime ratedAt;
     private LocalDateTime createTime;
 
     public Long getId() { return id; }
@@ -43,6 +45,10 @@ public class Consultation {
     public void setStatus(String status) { this.status = status; }
     public Integer getDeleted() { return deleted; }
     public void setDeleted(Integer deleted) { this.deleted = deleted; }
+    public Integer getRating() { return rating; }
+    public void setRating(Integer rating) { this.rating = rating; }
+    public LocalDateTime getRatedAt() { return ratedAt; }
+    public void setRatedAt(LocalDateTime ratedAt) { this.ratedAt = ratedAt; }
     public LocalDateTime getCreateTime() { return createTime; }
     public void setCreateTime(LocalDateTime createTime) { this.createTime = createTime; }
 }
